@@ -1,0 +1,38 @@
+# Core Python version
+python-dotenv==1.0.1
+
+# Data handling
+pandas==2.2.2
+numpy==1.26.4
+
+# NLP + Embeddings
+transformers==4.41.2
+sentence-transformers==3.0.1
+torch==2.3.1
+faiss-cpu==1.8.0
+
+# RAG / LLM frameworks
+langchain==0.2.1
+langchain-community==0.2.1
+langchain-core==0.2.1
+langchain-huggingface==0.0.3
+langchain-google-genai
+
+# Vector store + retrieval
+chromadb==0.5.0
+rank-bm25==0.2.2
+
+# Web scraping / ingestion
+requests==2.32.3
+beautifulsoup4==4.12.3
+pypdf==4.2.0
+
+# Dashboard / App layer
+streamlit==1.35.0
+fastapi==0.111.0
+uvicorn==0.30.1
+pydantic==2.7.4
+
+# Utilities
+tqdm==4.66.4
+python-dateutil==2.9.0
