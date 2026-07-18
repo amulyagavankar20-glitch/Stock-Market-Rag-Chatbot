@@ -8,19 +8,18 @@ Run: streamlit run app.py
 """
 
 import os
+import pickle
 import traceback
 
 import streamlit as st
 
-from src.ingestion import load_documents
-from src.chunking import chunk_documents
-from src.vector_embedding import build_vector_store, load_vector_store
+from src.vector_embedding import load_vector_store
 from src.chain import build_qa_chain
 
 # Configuring the Paths and Models
-DATA_PATH = "data"
 VECTOR_PATH = os.path.join("src", "vector")
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+CHUNKS_PATH = os.path.join(VECTOR_PATH, "chunks.pkl")
 
 st.set_page_config(page_title="Stock Market RAG Chatbot", page_icon="📈", layout="centered")
 
@@ -28,18 +27,26 @@ st.set_page_config(page_title="Stock Market RAG Chatbot", page_icon="📈", layo
 # Backend bootstrap (cached so it runs once per session) 
 @st.cache_resource(show_spinner="Loading knowledge base & building chain...")
 def init_pipeline():
-    """Load docs, ensure FAISS index exists, build chunks (needed for BM25 side of
-    hybrid retriever inside build_qa_chain), then build the QA chain. Cached across reruns."""
-    documents = load_documents(DATA_PATH)
-    if not documents:
-        raise RuntimeError(f"No documents found in '{DATA_PATH}'. Add PDFs and restart.")
-    chunks = chunk_documents(documents)
+    """Load a prebuilt FAISS index + cached chunks from disk (both produced by
+    running `python main.py` once) and build the QA chain. No ingestion or
+    chunking happens here — that's main.py's job. Cached across reruns."""
+    if not os.path.exists(CHUNKS_PATH):
+        raise RuntimeError(
+            f"No prebuilt chunks cache found at '{CHUNKS_PATH}'. "
+            f"Run `python main.py` first to ingest, chunk, and index your documents."
+        )
 
-    # Ensure FAISS index exists on disk (chain.py's retriever loads it via save_path).
+    with open(CHUNKS_PATH, "rb") as f:
+        chunks = pickle.load(f)
+
+    # Sanity check: FAISS index must already exist on disk (chain.py loads it via save_path).
     try:
         load_vector_store(model_name=EMBED_MODEL, save_path=VECTOR_PATH)
-    except Exception:
-        build_vector_store(chunks=chunks, model_name=EMBED_MODEL, save_path=VECTOR_PATH)
+    except Exception as e:
+        raise RuntimeError(
+            f"FAISS index not found or failed to load from '{VECTOR_PATH}'. "
+            f"Run `python main.py` first. Original error: {e}"
+        )
 
     # build_qa_chain takes chunks (not a retriever) — it builds the hybrid retriever internally.
     qa_chain = build_qa_chain(chunks=chunks, model_name=EMBED_MODEL, save_path=VECTOR_PATH)
